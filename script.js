@@ -9,10 +9,21 @@ document.addEventListener("DOMContentLoaded", () => {
     const mouseChargeStrength = 0.1; // How much the mouse charges the dots
 
     let mouseX = -1, mouseY = -1; // Store mouse position
-    canvas.addEventListener('mousemove', function(event) {
+
+    function updateMousePosition(x, y) {
         const rect = canvas.getBoundingClientRect();
-        mouseX = event.clientX - rect.left;
-        mouseY = event.clientY - rect.top;
+        mouseX = x - rect.left;
+        mouseY = y - rect.top;
+    }
+    
+    canvas.addEventListener('mousemove', function(event) {
+        updateMousePosition(event.clientX, event.clientY);
+    });
+
+    canvas.addEventListener('touchmove', function(event) {
+        event.preventDefault(); // Prevents the default scrolling behavior
+        const touch = event.touches[0];
+        updateMousePosition(touch.clientX, touch.clientY);
     });
 
     function distance(x1, y1, x2, y2) {
