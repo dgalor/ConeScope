@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function updateMousePosition(x, y) {
         const rect = canvas.getBoundingClientRect();
         mouseX = x - rect.left;
-        mouseY = y - rect.top;
+        mouseY = y - rect.top - 4 * chargeRadius;
     }
     
     canvas.addEventListener('mousemove', function(event) {
@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
         event.preventDefault(); // Prevents the default scrolling behavior
         const touch = event.touches[0];
         updateMousePosition(touch.clientX, touch.clientY);
-    });
+    }, { passive: false });
 
     function distance(x1, y1, x2, y2) {
         return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
