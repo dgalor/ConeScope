@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Hexagon Wave Simulation with Multi-Touch</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    /* Collapsible parameter menu styling (same as before) */
+    #parameterMenu {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(255,255,255,0.8);
+      border: 1px solid #ccc;
+      z-index: 1000;
+      font-family: sans-serif;
+      width: 220px;
+    }
+    #parameterMenuHeader {
+      padding: 8px;
+      background: #ddd;
+      cursor: pointer;
+      user-select: none;
+    }
+    #parameterMenuContent {
+      display: none;
+      padding: 10px;
+    }
+    #parameterMenuContent label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    #parameterMenuContent input {
+      width: 100%;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="hexCanvas"></canvas>
+
+  <div id="parameterMenu">
+    <div id="parameterMenuHeader">
+      Simulation Parameters &#9654;
+    </div>
+    <div id="parameterMenuContent">
+      <label>
+        Hex Size:
+        <input type="number" id="inputHexSize" value="10" step="1" min="1">
+      </label>
+      <label>
+        Dot Size:
+        <input type="number" id="inputDotSize" value="6" step="1" min="1">
+      </label>
+      <label>
+        Decay Factor:
+        <input type="number" id="inputDecayFactor" value="0.01" step="0.01" min="0" max="1">
+      </label>
+      <label>
+        Charge Radius:
+        <input type="number" id="inputChargeRadius" value="10" step="1" min="1">
+      </label>
+      <label>
+        Mouse/Touch Charge Strength:
+        <input type="number" id="inputMouseChargeStrength" value="0.1" step="0.1">
+      </label>
+      <label>
+        Wave Speed:
+        <input type="number" id="inputWaveSpeed" value="1.0" step="0.1">
+      </label>
+      <label>
+        Time Step (dt):
+        <input type="number" id="inputDt" value="0.1" step="0.1">
+      </label>
+      <button id="updateParamsButton">Update Parameters</button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const canvas = document.getElementById('hexCanvas');
+      const ctx = canvas.getContext('2d');
+
+      // ------------------------------------------------------------------
+      // Simulation & drawing parameters (mutable)
+      // ------------------------------------------------------------------
+      let hexSize = 10;           // Base hex "radius"
+      let dotSize = 6;            // Dot radius.
+      let decayFactor = 0.01;     // Damping factor.
+      let chargeRadius = 10;      // Radius within which a pointer affects a cell.
+      let mouseChargeStrength = 0.1; // Force magnitude per pointer.
+      let waveSpeed = 1.0;        // Wave speed.
+      let dt = 0.1;               // Time step.
+
+      // Derived parameters for grid layout:
+      let xOffset = hexSize * Math.sqrt(3);
+      let yOffset = hexSize * 3 / 2;
+
+      // ------------------------------------------------------------------
+      // UI: Collapsible parameter menu.
+      // ------------------------------------------------------------------
+      const parameterMenuHeader = document.getElementById('parameterMenuHeader');
+      const parameterMenuContent = document.getElementById('parameterMenuContent');
+      parameterMenuHeader.addEventListener('click', () => {
+        const isHidden = parameterMenuContent.style.display === 'none';
+        parameterMenuContent.style.display = isHidden ? 'block' : 'none';
+        parameterMenuHeader.innerHTML = isHidden 
+          ? 'Simulation Parameters &#9660;' 
+          : 'Simulation Parameters &#9654;';
+      });
+      // Set default to collapsed.
+      parameterMenuContent.style.display = 'none';
+
+      document.getElementById('updateParamsButton').addEventListener('click', () => {
+        hexSize = parseFloat(document.getElementById('inputHexSize').value);
+        dotSize = parseFloat(document.getElementById('inputDotSize').value);
+        decayFactor = parseFloat(document.getElementById('inputDecayFactor').value);
+        chargeRadius = parseFloat(document.getElementById('inputChargeRadius').value);
+        mouseChargeStrength = parseFloat(document.getElementById('inputMouseChargeStrength').value);
+        waveSpeed = parseFloat(document.getElementById('inputWaveSpeed').value);
+        dt = parseFloat(document.getElementById('inputDt').value);
+
+        xOffset = hexSize * Math.sqrt(3);
+        yOffset = hexSize * 3 / 2;
+
+        // Reinitialize simulation grid.
+        resizeCanvas();
+      });
+
+      // ------------------------------------------------------------------
+      // Handling multiple pointer sources (mouse & multi-touch)
+      // ------------------------------------------------------------------
+      // The 'sources' array holds objects {x, y} for each active pointer.
+      let sources = [];
+
+      // Mouse events (for desktop) update a single source.
+      canvas.addEventListener('mousemove', (event) => {
+        const rect = canvas.getBoundingClientRect();
+        sources = [{
+          x: event.clientX - rect.left,
+          y: event.clientY - rect.top
+        }];
+      });
+
+      // For touch events, update the sources array with all active touches.
+      function updateTouchSources(event) {
+        event.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        sources = [];
+        for (let i = 0; i < event.touches.length; i++) {
+          sources.push({
+            x: event.touches[i].clientX - rect.left,
+            y: event.touches[i].clientY - rect.top
+          });
+        }
+      }
+      canvas.addEventListener('touchstart', updateTouchSources, {passive: false});
+      canvas.addEventListener('touchmove', updateTouchSources, {passive: false});
+      canvas.addEventListener('touchend', updateTouchSources, {passive: false});
+      canvas.addEventListener('touchcancel', updateTouchSources, {passive: false});
+
+      // ------------------------------------------------------------------
+      // Global arrays for wave simulation
+      // ------------------------------------------------------------------
+      let waveCurrent = [];  // u(t)
+      let wavePrevious = []; // u(t - dt)
+      let gridWidth = 0;
+      let gridHeight = 0;
+
+      function initializeStates(width, height) {
+        gridWidth = width;
+        gridHeight = height;
+        waveCurrent = [];
+        wavePrevious = [];
+        for (let row = 0; row < height; row++) {
+          const currRow = [];
+          const prevRow = [];
+          for (let col = 0; col < width; col++) {
+            currRow.push(0);
+            prevRow.push(0);
+          }
+          waveCurrent.push(currRow);
+          wavePrevious.push(prevRow);
+        }
+      }
+
+      // ------------------------------------------------------------------
+      // Compute the discrete Laplacian on the hexagonal grid.
+      // ------------------------------------------------------------------
+      function computeLaplacian(row, col) {
+        let offsets;
+        if (row % 2 === 0) {
+          offsets = [
+            [-1, 0], [-1, -1],
+            [0, -1], [0, 1],
+            [1, 0], [1, -1]
+          ];
+        } else {
+          offsets = [
+            [-1, 0], [-1, 1],
+            [0, -1], [0, 1],
+            [1, 0], [1, 1]
+          ];
+        }
+        let sum = 0;
+        let count = 0;
+        offsets.forEach(offset => {
+          const nr = row + offset[0];
+          const nc = col + offset[1];
+          if (nr >= 0 && nr < gridHeight && nc >= 0 && nc < gridWidth) {
+            sum += waveCurrent[nr][nc];
+            count++;
+          }
+        });
+        return sum - count * waveCurrent[row][col];
+      }
+
+      // ------------------------------------------------------------------
+      // Update the wave dynamics using a finite difference scheme.
+      // ------------------------------------------------------------------
+      function updateWave() {
+        const newWave = [];
+        for (let row = 0; row < gridHeight; row++) {
+          newWave.push(new Array(gridWidth).fill(0));
+        }
+        for (let row = 0; row < gridHeight; row++) {
+          for (let col = 0; col < gridWidth; col++) {
+            // Fixed boundary conditions.
+            if (row === 0 || row === gridHeight - 1 || col === 0 || col === gridWidth - 1) {
+              newWave[row][col] = 0;
+              continue;
+            }
+            const laplacian = computeLaplacian(row, col);
+            let nextVal = 2 * waveCurrent[row][col] - wavePrevious[row][col] +
+                          (waveSpeed * dt) ** 2 * laplacian;
+            nextVal *= (1 - decayFactor);
+
+            // Calculate the drawing position for this grid cell.
+            const x = col * xOffset + (row % 2) * (xOffset / 2);
+            const y = row * yOffset;
+
+            // Loop over every active pointer source.
+            sources.forEach(source => {
+              if (Math.hypot(x - source.x, y - source.y) < chargeRadius) {
+                nextVal += mouseChargeStrength;
+              }
+            });
+            newWave[row][col] = nextVal;
+          }
+        }
+        wavePrevious = waveCurrent;
+        waveCurrent = newWave;
+      }
+
+      // ------------------------------------------------------------------
+      // Drawing routines
+      // ------------------------------------------------------------------
+      function drawDot(x, y, amplitude) {
+        let color;
+        if (amplitude > 0) {
+          let alpha = Math.min(amplitude, 1);
+          color = `rgba(255, 0, 0, ${alpha})`;
+        } else {
+          let alpha = Math.min(-amplitude, 1);
+          color = `rgba(0, 0, 255, ${alpha})`;
+        }
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y, dotSize, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+
+      function drawHexagon(x, y) {
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 0.5;
+        ctx.globalAlpha = 0.5;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const angle = (Math.PI / 180) * (60 * i - 30);
+          const vx = x + hexSize * Math.cos(angle);
+          const vy = y + hexSize * Math.sin(angle);
+          if (i === 0) {
+            ctx.moveTo(vx, vy);
+          } else {
+            ctx.lineTo(vx, vy);
+          }
+        }
+        ctx.closePath();
+        ctx.stroke();
+        ctx.globalAlpha = 1.0;
+      }
+
+      function drawGrid() {
+        for (let row = 0; row < gridHeight; row++) {
+          for (let col = 0; col < gridWidth; col++) {
+            const x = col * xOffset + (row % 2) * (xOffset / 2);
+            const y = row * yOffset;
+            drawDot(x, y, waveCurrent[row][col]);
+            drawHexagon(x, y);
+          }
+        }
+      }
+
+      // Optionally, draw circles at each active pointer.
+      function drawPointerSources() {
+        sources.forEach(source => {
+          ctx.beginPath();
+          ctx.arc(source.x, source.y, chargeRadius, 0, 2 * Math.PI);
+          ctx.stroke();
+        });
+      }
+
+      // ------------------------------------------------------------------
+      // Animation & resizing
+      // ------------------------------------------------------------------
+      function animate() {
+        updateWave();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawGrid();
+        drawPointerSources();
+        requestAnimationFrame(animate);
+      }
+
+      function resizeCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = window.innerWidth * dpr;
+        canvas.height = window.innerHeight * dpr;
+        canvas.style.width = window.innerWidth + 'px';
+        canvas.style.height = window.innerHeight + 'px';
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.scale(dpr, dpr);
+        const newGridWidth = Math.ceil(window.innerWidth / xOffset);
+        const newGridHeight = Math.ceil(window.innerHeight / yOffset);
+        initializeStates(newGridWidth, newGridHeight);
+        drawGrid();
+      }
+      window.addEventListener('resize', resizeCanvas);
+      resizeCanvas();
+      requestAnimationFrame(animate);
+    });
+  </script>
+</body>
+</html>

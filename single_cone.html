@@ -2,308 +2,392 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8" />
-    <style>
-        html,
-        body {
-            margin: 0;
-            padding: 0;
-            background: #111;
-            overflow: hidden;
-            font-family: sans-serif;
-            color: #eee;
-        }
+  <meta charset="UTF-8" />
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      background: #111;
+      overflow: hidden;
+      font-family: sans-serif;
+      color: #eee;
+    }
 
-        #canvas {
-            display: block;
-            background: #222;
-        }
+    #canvas {
+      display: block;
+      background: #222;
+    }
 
-        /* Info panel in the top left */
-        #info {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 8px;
-            border-radius: 4px;
-            font-size: 14px;
-            z-index: 10;
-            line-height: 1.5;
-        }
+    /* Info panel in the top left */
+    #info {
+      position: absolute;
+      top: 10px;
+      left: 100px;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 8px;
+      border-radius: 4px;
+      font-size: 14px;
+      z-index: 10;
+      line-height: 1.5;
+    }
 
-        /* Title in the center */
-        #title {
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 24px;
-            z-index: 10;
-        }
+    /* Title in the center */
+    #title {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 24px;
+      z-index: 10;
+    }
 
-        /* Controls panel in the top right */
-        #controls {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 8px;
-            border-radius: 4px;
-            font-size: 14px;
-            z-index: 10;
-            line-height: 1.5;
-        }
+    /* Controls panel in the top right */
+    #controls {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 8px;
+      border-radius: 4px;
+      font-size: 14px;
+      z-index: 10;
+      line-height: 1.5;
+    }
 
-        input[type="number"] {
-            width: 60px;
-            padding: 2px;
-            margin-left: 4px;
-        }
-    </style>
+    input[type="number"] {
+      width: 60px;
+      padding: 2px;
+      margin-left: 4px;
+    }
+
+    /* Citation in bottom right */
+    #citation {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 4px;
+      border-radius: 4px;
+      font-size: 10px;
+      z-index: 10;
+    }
+  </style>
 </head>
 
 <body>
-    <div id="info">
-        Current (pA): <span id="outputDisplay"></span><br>
-        Stimulus (R*/s): <span id="stimulusDisplay"></span><br>
-        FPS: <span id="fpsDisplay"></span><br>
-        binsize (ms): <span id="binsizeDisplay"></span><br>
-        dt (s): <span id="dtDisplay"></span><br>
-        sigma: <span id="sigmaDisplay"></span><br>
-        phi: <span id="phiDisplay"></span><br>
-        eta: <span id="etaDisplay"></span><br>
-        gamma: <span id="gammaDisplay"></span>
-    </div>
+  <div id="info">
+    Current (pA): <span id="outputDisplay"></span><br>
+    Stimulus (R*/s): <span id="stimulusDisplay"></span><br>
+    FPS: <span id="fpsDisplay"></span><br>
+    binsize (ms): <span id="binsizeDisplay"></span><br>
+    dt (s): <span id="dtDisplay"></span><br>
+    sigma: <span id="sigmaDisplay"></span><br>
+    phi: <span id="phiDisplay"></span><br>
+    eta: <span id="etaDisplay"></span><br>
+    gamma: <span id="gammaDisplay"></span>
+  </div>
 
-    <div id="title">
-        <h1>Interactive Cone Dynamics</h1>
-    </div>
+  <div id="title">
+    <h1>Interactive Cone Dynamics</h1>
+  </div>
 
-    <div id="controls">
-        binsize (ms):
-        <input id="binsizeControl" type="number" min="0.001" max="100" step="0.01" value="1">
-    </div>
+  <div id="controls">
+    binsize (ms):
+    <input id="binsizeControl" type="number" min="0.001" max="100" step="0.01" value="1">
+  </div>
 
-    <canvas id="canvas"></canvas>
-    <script>
-        // --- ConeSimulator class implementing the difference equations ---
-        class ConeSimulator {
-            constructor(params) {
-                // simulation parameters
-                this.binsize = params.binsize;  // binsize (ms)
-                this.dt = params.dt;          // simulation resolution (seconds)
-                this.sigma = params.sigma;
-                this.phi = params.phi;
-                this.eta = params.eta;
-                this.cgmp2cur = params.cgmp2cur;
-                this.cgmphill = params.cgmphill;
-                this.cdark = params.cdark;
-                this.beta = params.beta;
-                this.hillcoef = params.hillcoef;
-                this.hillaffinity = params.hillaffinity;
-                this.gamma = params.gamma;
-                this.gdark_input = params.gdark; // input value for g_dark
+  <canvas id="canvas"></canvas>
 
-                // Compute dark current and adjust gdark to be self-consistent
-                this.darkCurrent = Math.pow(this.gdark_input, this.cgmphill) * this.cgmp2cur / 2;
-                this.gdark = Math.pow(2 * this.darkCurrent / this.cgmp2cur, 1 / this.cgmphill);
+  <!-- Citation added so that credit is given (menu items are not interfered) -->
+  <div id="citation">
+    <a href="https://github.com/dgalor/ConeScope/blob/main/single_cone.html" target="_blank" style="color: #eee; text-decoration: none;">Based on ConeScope</a>
+  </div>
 
-                // Compute other steady-state parameters:
-                this.cur2ca = this.beta * this.cdark / this.darkCurrent;
-                this.smax = (this.eta / this.phi) * this.gdark * (1 + Math.pow(this.cdark / this.hillaffinity, this.hillcoef));
+  <script>
+    // --- ConeSimulator class implementing the difference equations ---
+    class ConeSimulator {
+      constructor(params) {
+        // simulation parameters
+        this.binsize = params.binsize; // binsize (ms)
+        this.dt = params.dt; // simulation resolution (seconds)
+        this.sigma = params.sigma;
+        this.phi = params.phi;
+        this.eta = params.eta;
+        this.cgmp2cur = params.cgmp2cur;
+        this.cgmphill = params.cgmphill;
+        this.cdark = params.cdark;
+        this.beta = params.beta;
+        this.hillcoef = params.hillcoef;
+        this.hillaffinity = params.hillaffinity;
+        this.gamma = params.gamma;
+        this.gdark_input = params.gdark; // input value for g_dark
 
-                // Initial conditions.
-                let initialStimulus = 0;
-                this.g = this.gdark;
-                this.s = (this.gdark * this.eta / this.phi);
-                this.c = this.cdark;
-                this.r = (this.gamma / this.binsize / this.sigma) * initialStimulus;
-                this.p = (this.eta + this.r) / this.phi;
+        // Compute dark current and adjust gdark to be self-consistent
+        this.darkCurrent = Math.pow(this.gdark_input, this.cgmphill) * this.cgmp2cur / 2;
+        this.gdark = Math.pow(2 * this.darkCurrent / this.cgmp2cur, 1 / this.cgmphill);
 
-                // For visualizing the simulation output
-                this.outputHistory = [];
-                this.t = 0; // simulation time
-            }
+        // Compute other steady-state parameters:
+        this.cur2ca = this.beta * this.cdark / this.darkCurrent;
+        this.smax = (this.eta / this.phi) * this.gdark * (1 + Math.pow(this.cdark / this.hillaffinity, this.hillcoef));
 
-            // One simulation update step using Euler integration.
-            update(dt, stimulus) {
-                // Update state variables
-                let r_new = this.r + dt * (-this.sigma * this.r + this.gamma / this.binsize * stimulus);
-                let p_new = this.p + dt * (this.r + this.eta - this.phi * this.p);
-                let g_pow = Math.pow(this.g, this.cgmphill);
-                let c_new = this.c + dt * (this.cur2ca * (this.cgmp2cur * g_pow) / 2 - this.beta * this.c);
-                let s_new = this.smax / (1 + Math.pow(c_new / this.hillaffinity, this.hillcoef));
-                let g_new = this.g + dt * (this.s - this.p * this.g);
+        // Initial conditions.
+        let initialStimulus = 0;
+        this.g = this.gdark;
+        this.s = (this.gdark * this.eta / this.phi);
+        this.c = this.cdark;
+        this.r = (this.gamma / this.binsize / this.sigma) * initialStimulus;
+        this.p = (this.eta + this.r) / this.phi;
 
-                // Store new states
-                this.r = r_new;
-                this.p = p_new;
-                this.c = c_new;
-                this.s = s_new;
-                this.g = g_new;
+        // For visualizing the simulation output
+        this.outputHistory = [];
+        this.t = 0; // simulation time
+      }
 
-                // Compute the output (cone current)
-                let output = -(this.cgmp2cur * Math.pow(this.g, this.cgmphill)) / 2;
+      // One simulation update step using Euler integration.
+      update(dt, stimulus) {
+        // Update state variables
+        let r_new = this.r + dt * (-this.sigma * this.r + this.gamma / this.binsize * stimulus);
+        let p_new = this.p + dt * (this.r + this.eta - this.phi * this.p);
+        let g_pow = Math.pow(this.g, this.cgmphill);
+        let c_new = this.c + dt * (this.cur2ca * (this.cgmp2cur * g_pow) / 2 - this.beta * this.c);
+        let s_new = this.smax / (1 + Math.pow(c_new / this.hillaffinity, this.hillcoef));
+        let g_new = this.g + dt * (this.s - this.p * this.g);
 
-                // Record output history (keeps last ~3 seconds)
-                this.outputHistory.push(output);
-                if (this.outputHistory.length > 3 / dt) {
-                    this.outputHistory.shift();
-                }
+        // Store new states
+        this.r = r_new;
+        this.p = p_new;
+        this.c = c_new;
+        this.s = s_new;
+        this.g = g_new;
 
-                this.t += dt;
-            }
+        // Compute the output (cone current)
+        let output = -(this.cgmp2cur * Math.pow(this.g, this.cgmphill)) / 2;
 
-            // Return the current output value.
-            getOutput() {
-                return -(this.cgmp2cur * Math.pow(this.g, this.cgmphill)) / 2;
-            }
+        // Record output history (keeps last ~3 seconds)
+        this.outputHistory.push(output);
+        if (this.outputHistory.length > 3 / dt) {
+          this.outputHistory.shift();
         }
 
-        // Global simulation parameters.
-        const params = {
-            binsize: 1.0, //ms
-            dt: 0.001, // DONT CHANGE -> change binsize
-            sigma: 2.2 * 10,
-            phi: 2.2 * 10,
-            eta: 2 * 1000,
-            cgmp2cur: 0.01,
-            cgmphill: 3.0,
-            cdark: 1.0,
-            beta: 0.9 * 10,
-            hillcoef: 4.0,
-            hillaffinity: 0.5,
-            gamma: 10.0,
-            gdark: 0.35 * 100
-        };
+        this.t += dt;
+      }
 
-        // Create our simulation object.
-        let coneSim = new ConeSimulator(params);
+      // Return the current output value.
+      getOutput() {
+        return -(this.cgmp2cur * Math.pow(this.g, this.cgmphill)) / 2;
+      }
+    }
 
-        // --- Setup canvas and UI ---
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const infoOutput = document.getElementById('outputDisplay');
-        const infoStimulus = document.getElementById('stimulusDisplay');
+    // Global simulation parameters.
+    const params = {
+      binsize: 1.0, //ms
+      dt: 0.001, // DONT CHANGE -> change binsize
+      sigma: 2.2 * 10,
+      phi: 2.2 * 10,
+      eta: 2 * 1000,
+      cgmp2cur: 0.01,
+      cgmphill: 3.0,
+      cdark: 1.0,
+      beta: 0.9 * 10,
+      hillcoef: 4.0,
+      hillaffinity: 0.5,
+      gamma: 10.0,
+      gdark: 0.35 * 100
+    };
 
-        // Additional info display elements.
-        const fpsDisplay = document.getElementById('fpsDisplay');
-        const binsizeDisplay = document.getElementById('binsizeDisplay');
-        const dtDisplay = document.getElementById('dtDisplay');
-        const sigmaDisplay = document.getElementById('sigmaDisplay');
-        const phiDisplay = document.getElementById('phiDisplay');
-        const etaDisplay = document.getElementById('etaDisplay');
-        const gammaDisplay = document.getElementById('gammaDisplay');
+    // Create our simulation object.
+    let coneSim = new ConeSimulator(params);
 
-        // UI control for binsize.
-        const binsizeControl = document.getElementById('binsizeControl');
-        binsizeControl.addEventListener('input', function () {
-            let newbinsize = Math.max(parseFloat(binsizeControl.value), 0.0001);
-            // Update simulation parameters that depend on binsize.
-            params.binsize = newbinsize;
-            coneSim = new ConeSimulator(params);
-        });
+    // --- Setup canvas and UI ---
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const infoOutput = document.getElementById('outputDisplay');
+    const infoStimulus = document.getElementById('stimulusDisplay');
 
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+    // Additional info display elements.
+    const fpsDisplay = document.getElementById('fpsDisplay');
+    const binsizeDisplay = document.getElementById('binsizeDisplay');
+    const dtDisplay = document.getElementById('dtDisplay');
+    const sigmaDisplay = document.getElementById('sigmaDisplay');
+    const phiDisplay = document.getElementById('phiDisplay');
+    const etaDisplay = document.getElementById('etaDisplay');
+    const gammaDisplay = document.getElementById('gammaDisplay');
+
+    // UI control for binsize.
+    const binsizeControl = document.getElementById('binsizeControl');
+    binsizeControl.addEventListener('input', function () {
+      let newbinsize = Math.max(parseFloat(binsizeControl.value), 0.0001);
+      // Update simulation parameters that depend on binsize.
+      params.binsize = newbinsize;
+      coneSim = new ConeSimulator(params);
+    });
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // The current stimulus (0–1) is set by the vertical mouse position.
+    let currentStimulus = 0;
+    canvas.addEventListener('mousemove', function (e) {
+      let rect = canvas.getBoundingClientRect();
+      let y = e.clientY - rect.top;
+      currentStimulus = 1 - (y / canvas.height);
+    });
+
+    // Variables for FPS calculation.
+    let frameCount = 0;
+    let fps = 0;
+    let lastFpsTime = performance.now();
+
+    // Simulation loop using requestAnimationFrame.
+    let lastFrameTime = performance.now();
+    let accumulatedTime = 0;
+
+    function animate(timestamp) {
+      let elapsed = (timestamp - lastFrameTime) / 1000;
+      lastFrameTime = timestamp;
+      accumulatedTime += elapsed;
+
+      // FPS calculation: count frames and update every second.
+      frameCount++;
+      if (timestamp - lastFpsTime >= 1000) {
+        fps = frameCount;
+        frameCount = 0;
+        lastFpsTime = timestamp;
+      }
+      let dt = coneSim.dt * coneSim.binsize;
+      // Run simulation updates using fixed time steps.
+      while (accumulatedTime >= dt) {
+        coneSim.update(dt, currentStimulus);
+        accumulatedTime -= dt;
+      }
+
+      render();
+      requestAnimationFrame(animate);
+    }
+
+    // Rendering function.
+    function render() {
+      // Clear the canvas.
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Update info display.
+      let output = coneSim.getOutput();
+      infoOutput.textContent = output.toFixed(3);
+      infoStimulus.textContent = currentStimulus.toFixed(3);
+
+      fpsDisplay.textContent = fps.toFixed(1);
+      binsizeDisplay.textContent = coneSim.binsize;
+      dtDisplay.textContent = (coneSim.dt * coneSim.binsize).toFixed(6);
+      sigmaDisplay.textContent = coneSim.sigma;
+      phiDisplay.textContent = coneSim.phi;
+      etaDisplay.textContent = coneSim.eta;
+      gammaDisplay.textContent = (coneSim.gamma / coneSim.binsize).toFixed(2);
+
+      // Define margins for the graph area.
+      const leftMargin = 50;
+      const rightMargin = 20;
+      const topMargin = 20;
+      const bottomMargin = 40;
+      const graphWidth = canvas.width - leftMargin - rightMargin;
+      const graphHeight = canvas.height - topMargin - bottomMargin;
+
+      // Draw the simulation output as a line graph within the graph area.
+      let history = coneSim.outputHistory;
+      if (history.length > 1) {
+        // Dynamically compute y-axis limits from the history.
+        let yMin = Math.min(...history);
+        let yMax = Math.max(...history);
+        if (yMin === yMax) {
+          yMin -= 1;
+          yMax += 1;
         }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
 
-        // The current stimulus (0–1) is set by the vertical mouse position.
-        let currentStimulus = 0;
-        canvas.addEventListener('mousemove', function (e) {
-            let rect = canvas.getBoundingClientRect();
-            let y = e.clientY - rect.top;
-            currentStimulus = 1 - (y / canvas.height);
-        });
+        // Draw the simulation line.
+        ctx.beginPath();
+        let step = graphWidth / (history.length - 1);
+        for (let i = 0; i < history.length; i++) {
+          let x = leftMargin + i * step;
+          let normalizedValue = (history[i] - yMin) / (yMax - yMin);
+          let y = topMargin + (1 - normalizedValue) * graphHeight;
+          if (i === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        ctx.strokeStyle = "#0f0"; // green line for the output.
+        ctx.lineWidth = 2;
+        ctx.stroke();
 
-        // Variables for FPS calculation.
-        let frameCount = 0;
-        let fps = 0;
-        let lastFpsTime = performance.now();
+        // --- Draw axes ---
+        ctx.strokeStyle = "#eee";
+        ctx.lineWidth = 1;
 
-        // Simulation loop using requestAnimationFrame.
-        let lastFrameTime = performance.now();
-        let accumulatedTime = 0;
+        // Draw x-axis at the bottom of the graph area.
+        ctx.beginPath();
+        ctx.moveTo(leftMargin, topMargin + graphHeight);
+        ctx.lineTo(leftMargin + graphWidth, topMargin + graphHeight);
+        ctx.stroke();
 
-        function animate(timestamp) {
-            let elapsed = (timestamp - lastFrameTime) / 1000;
-            lastFrameTime = timestamp;
-            accumulatedTime += elapsed;
+        // Draw y-axis at the left side of the graph area.
+        ctx.beginPath();
+        ctx.moveTo(leftMargin, topMargin);
+        ctx.lineTo(leftMargin, topMargin + graphHeight);
+        ctx.stroke();
 
-            // FPS calculation: count frames and update every second.
-            frameCount++;
-            if (timestamp - lastFpsTime >= 1000) {
-                fps = frameCount;
-                frameCount = 0;
-                lastFpsTime = timestamp;
-            }
-            let dt = coneSim.dt * coneSim.binsize;
-            // Run simulation updates using fixed time steps (using current coneSim.dt).
-            while (accumulatedTime >= dt) {
-                coneSim.update(dt, currentStimulus);
-                accumulatedTime -= dt;
-            }
-
-            render();
-            requestAnimationFrame(animate);
+        // --- Draw x-axis ticks and labels ---
+        // Compute the time span represented by the history.
+        let dt_graph = coneSim.dt * coneSim.binsize;
+        let graphDuration = (history.length - 1) * dt_graph;
+        let t_end = coneSim.t;
+        let t_start = t_end - graphDuration;
+        // Set tick interval to 0.5 seconds.
+        let tickInterval = 0.5;
+        let firstTick = Math.ceil(t_start / tickInterval) * tickInterval;
+        ctx.fillStyle = "#eee";
+        ctx.font = "10px sans-serif";
+        for (let tick = firstTick; tick <= t_end; tick += tickInterval) {
+          let fraction = (tick - t_start) / graphDuration;
+          let xTick = leftMargin + fraction * graphWidth;
+          // Draw tick mark (5px tall).
+          ctx.beginPath();
+          ctx.moveTo(xTick, topMargin + graphHeight);
+          ctx.lineTo(xTick, topMargin + graphHeight + 5);
+          ctx.stroke();
+          // Draw tick label.
+          let label = tick.toFixed(1);
+          let textWidth = ctx.measureText(label).width;
+          ctx.fillText(label, xTick - textWidth / 2, topMargin + graphHeight + 15);
         }
 
-        // Rendering function.
-        function render() {
-            // Clear the canvas.
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Update info display.
-            let output = coneSim.getOutput();
-            infoOutput.textContent = output.toFixed(3);
-            infoStimulus.textContent = currentStimulus.toFixed(3);
-
-            fpsDisplay.textContent = fps.toFixed(1);
-            binsizeDisplay.textContent = coneSim.binsize;
-            dtDisplay.textContent = (coneSim.dt * coneSim.binsize).toFixed(6);
-            sigmaDisplay.textContent = coneSim.sigma;
-            phiDisplay.textContent = coneSim.phi;
-            etaDisplay.textContent = coneSim.eta;
-            gammaDisplay.textContent = (coneSim.gamma / coneSim.binsize).toFixed(2);
-
-            // Draw the simulation output as a line graph.
-            let history = coneSim.outputHistory;
-            if (history.length > 1) {
-                // Dynamically compute y-axis limits.
-                let yMin = Math.min(...history);
-                let yMax = Math.max(...history);
-                if (yMin === yMax) {
-                    yMin -= 1;
-                    yMax += 1;
-                }
-                ctx.beginPath();
-                let step = canvas.width / (history.length - 1);
-                for (let i = 0; i < history.length; i++) {
-                    let x = i * step;
-                    let normalizedValue = (history[i] - yMin) / (yMax - yMin);
-                    let y = canvas.height - (normalizedValue * canvas.height);
-                    if (i === 0) {
-                        ctx.moveTo(x, y);
-                    } else {
-                        ctx.lineTo(x, y);
-                    }
-                }
-                ctx.strokeStyle = "#0f0";  // green line for the output.
-                ctx.lineWidth = 2;
-                ctx.stroke();
-            }
+        // --- Draw y-axis ticks and labels ---
+        // We'll draw ticks at the bottom, middle, and top.
+        let yTicks = [0, 0.5, 1];
+        for (let i = 0; i < yTicks.length; i++) {
+          let fraction = yTicks[i];
+          let yTick = topMargin + (1 - fraction) * graphHeight;
+          // Draw tick mark (5px horizontal).
+          ctx.beginPath();
+          ctx.moveTo(leftMargin - 5, yTick);
+          ctx.lineTo(leftMargin, yTick);
+          ctx.stroke();
+          // Label value (calculate corresponding simulation value).
+          let value = yMin + fraction * (yMax - yMin);
+          let label = value.toFixed(2);
+          let textWidth = ctx.measureText(label).width;
+          ctx.fillText(label, leftMargin - 7 - textWidth, yTick + 3);
         }
+      }
+    }
 
-        // Start the simulation loop.
-        requestAnimationFrame(animate);
-    </script>
+    // Start the simulation loop.
+    requestAnimationFrame(animate);
+  </script>
 </body>
 
 </html>
-
-<!-- add citation to "Predicting and Manipulating Cone Responses to Naturalistic Inputs. Juan M. Angueyra, Jacob Baudin, Gregory W. Schwartz, Fred Rieke
-Journal of Neuroscience 16 February 2022, 42 (7) 1254-1274; DOI: 10.1523/JNEUROSCI.0793-21.2021 and also to https://github.com/saadidrees/dynret -->
