@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Lipschitz Continuity Demo</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #fff;
+    }
+    canvas {
+      display: block;
+      background: #fafafa;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <script>
+    // Set up the canvas for high DPI displays
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    // Define logical canvas size
+    const logicalWidth = 600;
+    const logicalHeight = 400;
+    
+    // Handle high-DPI displays
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = logicalWidth * dpr;
+    canvas.height = logicalHeight * dpr;
+    canvas.style.width = logicalWidth + 'px';
+    canvas.style.height = logicalHeight + 'px';
+    ctx.scale(dpr, dpr);
+
+    // Define the math domain and range for display
+    const xMin = -Math.PI;
+    const xMax = Math.PI;
+    const yMin = -1.5;
+    const yMax = 1.5;
+
+    // Coordinate conversion functions
+    function toCanvasX(x) {
+      return ((x - xMin) / (xMax - xMin)) * logicalWidth;
+    }
+    function toCanvasY(y) {
+      return logicalHeight - ((y - yMin) / (yMax - yMin)) * logicalHeight;
+    }
+    function toMathX(canvasX) {
+      return xMin + (canvasX / logicalWidth) * (xMax - xMin);
+    }
+
+    // Our function: f(x) = sin(x)
+    function f(x) {
+      return Math.sin(x);
+    }
+    // Lipschitz constant for sin(x) is 1.
+    const L = 1;
+
+    // Two draggable points on the curve
+    let pointA = { x: -1, y: f(-1) };
+    let pointB = { x: 1, y: f(1) };
+    let dragging = null; // which point is being dragged
+
+    // Draw the entire scene
+    function draw() {
+      // Clear the canvas
+      ctx.clearRect(0, 0, logicalWidth, logicalHeight);
+
+      // Draw axes
+      ctx.strokeStyle = "#aaa";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      // x-axis
+      let yZero = toCanvasY(0);
+      ctx.moveTo(0, yZero);
+      ctx.lineTo(logicalWidth, yZero);
+      // y-axis
+      let xZero = toCanvasX(0);
+      ctx.moveTo(xZero, 0);
+      ctx.lineTo(xZero, logicalHeight);
+      ctx.stroke();
+
+      // Draw the function sin(x)
+      ctx.strokeStyle = "blue";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      let first = true;
+      for (let i = 0; i <= logicalWidth; i++) {
+        let xVal = toMathX(i);
+        let yVal = f(xVal);
+        let canvasY = toCanvasY(yVal);
+        if (first) {
+          ctx.moveTo(i, canvasY);
+          first = false;
+        } else {
+          ctx.lineTo(i, canvasY);
+        }
+      }
+      ctx.stroke();
+
+      // Draw the red line connecting the two points (illustrating |sin(x₁)-sin(x₂)|)
+      ctx.strokeStyle = "red";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      let ax = toCanvasX(pointA.x);
+      let ay = toCanvasY(pointA.y);
+      let bx = toCanvasX(pointB.x);
+      let by = toCanvasY(pointB.y);
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(bx, by);
+      ctx.stroke();
+
+      // Draw the draggable points in green
+      ctx.fillStyle = "green";
+      function drawPoint(pt) {
+        let cx = toCanvasX(pt.x);
+        let cy = toCanvasY(pt.y);
+        ctx.beginPath();
+        ctx.arc(cx, cy, 6, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+      drawPoint(pointA);
+      drawPoint(pointB);
+
+      // Calculate the ratio to illustrate the Lipschitz inequality fraction
+      let diffY = Math.abs(pointA.y - pointB.y);
+      let diffX = Math.abs(pointA.x - pointB.x);
+      let ratio = diffX < 1e-6 ? L.toFixed(3) : (diffY / diffX).toFixed(3);
+      // Display the fraction in the top left corner
+      ctx.fillStyle = "black";
+      ctx.font = "16px Arial";
+      const text = `(|sin(x₁)-sin(x₂)|)/(|x₁-x₂|) = ${ratio} ≤ ${L}`;
+      ctx.fillText(text, 10, 20);
+    }
+
+    // Helper: update point position based on mouse event (ensuring it stays on the curve)
+    function updatePointFromMouse(e) {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const x = toMathX(mouseX);
+      return { x: x, y: f(x) };
+    }
+
+    // Mouse event listeners for dragging points
+    canvas.addEventListener("mousedown", function(e) {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      // Check distance to point A and B (within 10 pixels to be draggable)
+      const distA = Math.hypot(mouseX - toCanvasX(pointA.x), mouseY - toCanvasY(pointA.y));
+      const distB = Math.hypot(mouseX - toCanvasX(pointB.x), mouseY - toCanvasY(pointB.y));
+      if (distA < 10) {
+        dragging = 'A';
+      } else if (distB < 10) {
+        dragging = 'B';
+      }
+    });
+
+    canvas.addEventListener("mousemove", function(e) {
+      if (dragging) {
+        const newPt = updatePointFromMouse(e);
+        if (dragging === 'A') {
+          pointA = newPt;
+        } else {
+          pointB = newPt;
+        }
+        draw();
+      }
+    });
+
+    canvas.addEventListener("mouseup", function() {
+      dragging = null;
+    });
+    canvas.addEventListener("mouseleave", function() {
+      dragging = null;
+    });
+
+    // Initial draw
+    draw();
+  </script>
+</body>
+</html>
