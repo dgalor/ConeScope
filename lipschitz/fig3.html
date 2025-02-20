@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Armijo Condition Demo for sin(x)</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      margin: 20px;
+      text-align: center;
+    }
+    #controls {
+      margin-bottom: 15px;
+    }
+    #controls label {
+      font-size: 16px;
+    }
+    #info {
+      font-size: 16px;
+      margin-top: 5px;
+    }
+    canvas {
+      background: #fff;
+      border: 1px solid #ccc;
+      display: block;
+      margin: auto;
+    }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <label for="alphaSlider">Step size α:</label>
+    <input type="range" id="alphaSlider" min="0.1" max="4" step="0.01">
+    <span id="alphaVal"></span>
+  </div>
+  <div id="info"></div>
+  <canvas id="canvas" width="600" height="400"></canvas>
+
+  <script>
+    // Set up canvas (with high-DPI support)
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const logicalWidth = 600, logicalHeight = 400;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = logicalWidth * dpr;
+    canvas.height = logicalHeight * dpr;
+    canvas.style.width = logicalWidth + "px";
+    canvas.style.height = logicalHeight + "px";
+    ctx.scale(dpr, dpr);
+
+    // Function: f(x) = sin(x) and its derivative f'(x) = cos(x)
+    function f(x) {
+      return Math.sin(x);
+    }
+    function fp(x) {
+      return Math.cos(x);
+    }
+
+    // Fixed current iterate and Armijo parameter
+    const currentX = 3;       // current iterate, xₖ
+    const c = 0.5;            // Armijo parameter
+    const gradAtX = fp(currentX); // f'(3) = cos(3)
+
+    // Lipschitz constant for f' is 1, so default alpha = 1.
+    const defaultAlpha = 1;
+
+    // Set up slider
+    const alphaSlider = document.getElementById("alphaSlider");
+    const alphaValSpan = document.getElementById("alphaVal");
+    alphaSlider.value = defaultAlpha;
+    alphaValSpan.textContent = parseFloat(alphaSlider.value).toFixed(2);
+
+    const infoDiv = document.getElementById("info");
+
+    // Domain for plotting: x from 0 to 6, y from -1.5 to 1.5
+    const xMin = 0, xMax = 6;
+    const yMin = -1.5, yMax = 1.5;
+
+    // Coordinate conversion functions
+    function toCanvasX(x) {
+      return ((x - xMin) / (xMax - xMin)) * logicalWidth;
+    }
+    function toCanvasY(y) {
+      return logicalHeight - ((y - yMin) / (yMax - yMin)) * logicalHeight;
+    }
+
+    // Draw the entire scene: function, current iterate, candidate point, and arrow.
+    function drawScene(alpha) {
+      // Compute candidate: x_candidate = xₖ - α f'(xₖ)
+      const candidateX = currentX - alpha * gradAtX;
+      
+      // Armijo condition: f(xₖ - α f'(xₖ)) ≤ f(xₖ) - c α [f'(xₖ)]²
+      const armijoCondition = f(candidateX) <= f(currentX) - c * alpha * gradAtX * gradAtX;
+      
+      // Update info text
+      infoDiv.textContent = `xₖ = ${currentX.toFixed(2)}, f(xₖ) = ${f(currentX).toFixed(2)};  Candidate x = ${candidateX.toFixed(2)} ${armijoCondition ? "(Acceptable)" : "(Armijo violated!)"}`;
+
+      // Clear canvas
+      ctx.clearRect(0, 0, logicalWidth, logicalHeight);
+
+      // Draw coordinate axes
+      ctx.strokeStyle = "#aaa";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      // x-axis
+      let yAxisZero = toCanvasY(0);
+      ctx.moveTo(0, yAxisZero);
+      ctx.lineTo(logicalWidth, yAxisZero);
+      // y-axis
+      let xAxisZero = toCanvasX(0);
+      ctx.moveTo(xAxisZero, 0);
+      ctx.lineTo(xAxisZero, logicalHeight);
+      ctx.stroke();
+
+      // Draw function f(x) = sin(x) in blue
+      ctx.strokeStyle = "blue";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      let first = true;
+      for (let i = 0; i <= logicalWidth; i++) {
+        let xVal = xMin + (i / logicalWidth) * (xMax - xMin);
+        let yVal = f(xVal);
+        let cx = toCanvasX(xVal);
+        let cy = toCanvasY(yVal);
+        if (first) {
+          ctx.moveTo(cx, cy);
+          first = false;
+        } else {
+          ctx.lineTo(cx, cy);
+        }
+      }
+      ctx.stroke();
+
+      // Draw current iterate as a red circle
+      const curCanvasX = toCanvasX(currentX);
+      const curCanvasY = toCanvasY(f(currentX));
+      ctx.fillStyle = "red";
+      ctx.beginPath();
+      ctx.arc(curCanvasX, curCanvasY, 6, 0, 2 * Math.PI);
+      ctx.fill();
+
+      // Draw candidate point and arrow
+      const candCanvasX = toCanvasX(candidateX);
+      const candCanvasY = toCanvasY(f(candidateX));
+
+      // Arrow color: green if Armijo condition holds, red if it fails.
+      ctx.strokeStyle = armijoCondition ? "green" : "red";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(curCanvasX, curCanvasY);
+      ctx.lineTo(candCanvasX, candCanvasY);
+      ctx.stroke();
+
+      // Draw candidate point as a circle
+      ctx.fillStyle = armijoCondition ? "green" : "red";
+      ctx.beginPath();
+      ctx.arc(candCanvasX, candCanvasY, 6, 0, 2 * Math.PI);
+      ctx.fill();
+
+      // Draw an arrowhead at candidate point
+      drawArrowhead(curCanvasX, curCanvasY, candCanvasX, candCanvasY, armijoCondition ? "green" : "red");
+    }
+
+    // Utility function to draw an arrowhead from (x1,y1) to (x2,y2)
+    function drawArrowhead(x1, y1, x2, y2, color) {
+      const headLength = 10; // length of head in pixels
+      const angle = Math.atan2(y2 - y1, x2 - x1);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(x2, y2);
+      ctx.lineTo(x2 - headLength * Math.cos(angle - Math.PI / 6),
+                 y2 - headLength * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(x2 - headLength * Math.cos(angle + Math.PI / 6),
+                 y2 - headLength * Math.sin(angle + Math.PI / 6));
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Event listener: update drawing on slider change
+    alphaSlider.addEventListener("input", (e) => {
+      const alpha = parseFloat(e.target.value);
+      alphaValSpan.textContent = alpha.toFixed(2);
+      drawScene(alpha);
+    });
+
+    // Initial drawing
+    drawScene(defaultAlpha);
+  </script>
+</body>
+</html>
