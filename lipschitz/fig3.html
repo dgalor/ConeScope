@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Armijo Condition Demo for sin(x)</title>
+  <title>Armijo Condition Demo for sin(x) with Two Sliders</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -15,6 +15,7 @@
     }
     #controls label {
       font-size: 16px;
+      margin-right: 10px;
     }
     #info {
       font-size: 16px;
@@ -26,13 +27,23 @@
       display: block;
       margin: auto;
     }
+    .slider-container {
+      margin: 10px 0;
+    }
   </style>
 </head>
 <body>
   <div id="controls">
-    <label for="alphaSlider">Step size α:</label>
-    <input type="range" id="alphaSlider" min="0.1" max="4" step="0.01">
-    <span id="alphaVal"></span>
+    <div class="slider-container">
+      <label for="alphaSlider">Step size α:</label>
+      <input type="range" id="alphaSlider" min="0.1" max="4" step="0.01">
+      <span id="alphaVal"></span>
+    </div>
+    <div class="slider-container">
+      <label for="cSlider">Armijo parameter c:</label>
+      <input type="range" id="cSlider" min="0.1" max="0.9" step="0.01">
+      <span id="cVal"></span>
+    </div>
   </div>
   <div id="info"></div>
   <canvas id="canvas" width="600" height="400"></canvas>
@@ -57,19 +68,24 @@
       return Math.cos(x);
     }
 
-    // Fixed current iterate and Armijo parameter
+    // Fixed current iterate and default parameters
     const currentX = 3;       // current iterate, xₖ
-    const c = 0.5;            // Armijo parameter
     const gradAtX = fp(currentX); // f'(3) = cos(3)
 
-    // Lipschitz constant for f' is 1, so default alpha = 1.
+    // Default values: Lipschitz constant for f' is 1, so default alpha = 1.
     const defaultAlpha = 1;
+    const defaultC = 0.5;
 
-    // Set up slider
+    // Set up sliders
     const alphaSlider = document.getElementById("alphaSlider");
     const alphaValSpan = document.getElementById("alphaVal");
     alphaSlider.value = defaultAlpha;
     alphaValSpan.textContent = parseFloat(alphaSlider.value).toFixed(2);
+
+    const cSlider = document.getElementById("cSlider");
+    const cValSpan = document.getElementById("cVal");
+    cSlider.value = defaultC;
+    cValSpan.textContent = parseFloat(cSlider.value).toFixed(2);
 
     const infoDiv = document.getElementById("info");
 
@@ -85,8 +101,8 @@
       return logicalHeight - ((y - yMin) / (yMax - yMin)) * logicalHeight;
     }
 
-    // Draw the entire scene: function, current iterate, candidate point, and arrow.
-    function drawScene(alpha) {
+    // Draw the scene: function, current iterate, candidate point, and arrow.
+    function drawScene(alpha, c) {
       // Compute candidate: x_candidate = xₖ - α f'(xₖ)
       const candidateX = currentX - alpha * gradAtX;
       
@@ -94,7 +110,7 @@
       const armijoCondition = f(candidateX) <= f(currentX) - c * alpha * gradAtX * gradAtX;
       
       // Update info text
-      infoDiv.textContent = `xₖ = ${currentX.toFixed(2)}, f(xₖ) = ${f(currentX).toFixed(2)};  Candidate x = ${candidateX.toFixed(2)} ${armijoCondition ? "(Acceptable)" : "(Armijo violated!)"}`;
+      infoDiv.textContent = `xₖ = ${currentX.toFixed(2)}, f(xₖ) = ${f(currentX).toFixed(2)}; Candidate x = ${candidateX.toFixed(2)} ${armijoCondition ? "(Acceptable)" : "(Armijo violated!)"}`;
 
       // Clear canvas
       ctx.clearRect(0, 0, logicalWidth, logicalHeight);
@@ -162,7 +178,7 @@
       drawArrowhead(curCanvasX, curCanvasY, candCanvasX, candCanvasY, armijoCondition ? "green" : "red");
     }
 
-    // Utility function to draw an arrowhead from (x1,y1) to (x2,y2)
+    // Utility function to draw an arrowhead from (x1, y1) to (x2, y2)
     function drawArrowhead(x1, y1, x2, y2, color) {
       const headLength = 10; // length of head in pixels
       const angle = Math.atan2(y2 - y1, x2 - x1);
@@ -177,15 +193,19 @@
       ctx.fill();
     }
 
-    // Event listener: update drawing on slider change
-    alphaSlider.addEventListener("input", (e) => {
-      const alpha = parseFloat(e.target.value);
+    // Event listeners: update drawing on slider changes
+    function updateScene() {
+      const alpha = parseFloat(alphaSlider.value);
+      const c = parseFloat(cSlider.value);
       alphaValSpan.textContent = alpha.toFixed(2);
-      drawScene(alpha);
-    });
+      cValSpan.textContent = c.toFixed(2);
+      drawScene(alpha, c);
+    }
+    alphaSlider.addEventListener("input", updateScene);
+    cSlider.addEventListener("input", updateScene);
 
     // Initial drawing
-    drawScene(defaultAlpha);
+    updateScene();
   </script>
 </body>
 </html>
