@@ -16,7 +16,7 @@ body {
 
 canvas {
     background: #fafafa;
-    border: 1px solid #ccc;
+    border: 1% solid #ccc;
     display: block;
     overflow: hidden;
 }
@@ -26,17 +26,17 @@ canvas {
 }
 
 #controls {
-    margin-bottom: 15px;
+    margin-bottom: 1.5%;
 }
 
 #controls label {
-    font-size: 16px;
-    margin-right: 10px;
+    font-size: 1.6%;
+    margin-right: 1.0%;
 }
 
 #info {
-    font-size: 16px;
-    margin-top: 5px;
+    font-size: 1.6%;
+    margin-top: 0.5%;
 }
 
 .canvas-container {
