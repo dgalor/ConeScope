@@ -6,7 +6,7 @@ body {
     overflow: hidden;
 }
 #controls {
-    margin-bottom: 5%;
+    margin-bottom: 2%;
 }
 #controls label {
     font-size: 100%;
@@ -25,7 +25,7 @@ body {
   /* The canvas container will adjust its size relative to the screen */
   #canvasContainer {
     max-width: 600px;
-    margin: 5% auto;
+    margin: 2% auto;
     position: relative;
   }
   canvas {

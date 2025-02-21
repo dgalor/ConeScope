@@ -143,12 +143,6 @@ canvas.addEventListener("pointerdown", function(e) {
   const mouseY = (e.clientY - rect.top) / scaleFactor;
   const distA = Math.hypot(mouseX - toCanvasX(pointA.x), mouseY - toCanvasY(pointA.y));
   const distB = Math.hypot(mouseX - toCanvasX(pointB.x), mouseY - toCanvasY(pointB.y));
-//   if (distA < 10) {
-//     dragging = 'A';
-//   } else if (distB < 10) {
-//     dragging = 'B';
-//   }
-//do relative distance instead of whats above
     if (distA < distB) {
         dragging = 'A';
     } else {
