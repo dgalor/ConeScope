@@ -20,4 +20,7 @@ canvas {
     display: block;
     overflow: hidden;
 }
+#sliderContainer {
+    margin-bottom: 1.0%;
+}
   
