@@ -1,0 +1,113 @@
+
+<!-- CHANGE TITLE AND GOOGLE DRIVE FILE ID -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title id="page-title">Automatic Step Size Selection in Optimization</title>
+  <style>
+    /* Base page styling */
+    title {
+      color: #e06c75;
+    }
+    body {
+      background-color: #0b0a09;
+      color: #abb2bf;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      margin-top: -11rem;
+      padding: 10rem;
+    }
+    /* Constrain content width for readability */
+    .content {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    /* Heading styling */
+    h1, h2, h3, h4, h5, h6 {
+      color: #e06c75;
+      margin-top: 1.5em;
+    }
+    /* Center images and figures */
+    img, figure {
+      display: block;
+      margin: 1em auto;
+      max-width: 100%;
+    }
+    /* Code block styling */
+    pre {
+      background-color: #21252b;
+      padding: 1rem;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+    code {
+      font-family: "Fira Code", Consolas, monospace;
+      background-color: rgba(255, 255, 255, 0.1);
+      padding: 0.2em 0.4em;
+      border-radius: 3px;
+    }
+    /* Link styling */
+    a {
+      color: #61afef;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <h1 id="content-title">Loading title...</h1>
+  <div id="content">Loading content...</div>
+
+  <!-- Include marked.js via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script type="text/javascript" id="MathJax" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$']],
+        displayMath: [['$$', '$$']]
+      }
+    };
+  </script>  
+  <script>
+    //make sure DOM is loaded
+    document.addEventListener("DOMContentLoaded", function() {
+        //set content title to the page title
+        document.getElementById('content-title').innerText = document.getElementById('page-title').innerText;
+        // Direct download URL from Google Drive
+        const driveUrl = 'https://drive.google.com/uc?export=view&id=1bReEzLHNGwRORErDI2r_1X9_6_Oap_kP';
+        
+        // Use AllOrigins to bypass CORS restrictions
+        const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(driveUrl);
+        
+        fetch(proxyUrl)
+        .then(response => {
+            if (!response.ok) {
+            throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            let markdownText = data.contents;
+            // Check if the content is a base64 data URL and decode it
+            const prefix = "data:application/octet-stream;base64,";
+            if (markdownText.startsWith(prefix)) {
+            markdownText = atob(markdownText.substring(prefix.length));
+            }
+            // Convert Markdown to HTML using marked.js
+            const htmlContent = marked.parse(markdownText);
+            document.getElementById('content').innerHTML = htmlContent;
+        })
+        .catch(error => {
+            console.error('Error fetching Markdown:', error);
+            document.getElementById('content').innerText = 'Failed to load content.';
+        });
+    });
+  </script>
+</body>
+</html>

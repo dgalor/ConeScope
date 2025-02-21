@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Armijo Condition Demo for sin(x) with Two Sliders</title>
+  <title>Curvature Condition (Strong Wolfe) Demo</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -20,18 +20,26 @@
     }
     #info {
       font-size: 16px;
-      margin-top: 5px;
-    }
-    /* Canvas container to center and restrict maximum width */
-    .canvas-container {
-      margin: auto;
+      margin: 10px auto;
       max-width: 600px;
+      background: #eaeaea;
+      padding: 10px;
+      border-radius: 5px;
+      white-space: pre-line;
+      text-align: left;
+    }
+    /* The canvas container will adjust its size relative to the screen */
+    #canvasContainer {
+      max-width: 600px;
+      margin: 20px auto;
+      position: relative;
     }
     canvas {
-      background: #fff;
-      border: 1px solid #ccc;
       width: 100%;
       height: auto;
+      background: #fff;
+      border: 1px solid #ccc;
+      display: block;
     }
     .slider-container {
       margin: 10px 0;
@@ -46,39 +54,44 @@
       <span id="alphaVal"></span>
     </div>
     <div class="slider-container">
-      <label for="cSlider">Armijo parameter c:</label>
-      <input type="range" id="cSlider" min="0.1" max="0.9" step="0.01">
-      <span id="cVal"></span>
+      <label for="c2Slider">Curvature parameter c₂:</label>
+      <input type="range" id="c2Slider" min="0.1" max="0.99" step="0.01">
+      <span id="c2Val"></span>
     </div>
   </div>
   <div id="info"></div>
-  <div class="canvas-container">
+  <div id="canvasContainer">
     <canvas id="canvas"></canvas>
   </div>
 
   <script>
+    // Global variables for canvas dimensions
+    let logicalWidth = 600;
+    let logicalHeight = 400;
+    
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
-
-    // Original logical dimensions for drawing (aspect ratio 3:2)
-    let logicalWidth = 600, logicalHeight = 400;
+    const dpr = window.devicePixelRatio || 1;
     
-    // Setup sliders and info text
+    // Set up sliders for α and c₂.
     const alphaSlider = document.getElementById("alphaSlider");
     const alphaValSpan = document.getElementById("alphaVal");
-    const cSlider = document.getElementById("cSlider");
-    const cValSpan = document.getElementById("cVal");
+    const c2Slider = document.getElementById("c2Slider");
+    const c2ValSpan = document.getElementById("c2Val");
     const infoDiv = document.getElementById("info");
 
-    // Set default slider values
     const defaultAlpha = 1;
-    const defaultC = 0.5;
+    const defaultC2 = 0.9;
     alphaSlider.value = defaultAlpha;
     alphaValSpan.textContent = parseFloat(alphaSlider.value).toFixed(2);
-    cSlider.value = defaultC;
-    cValSpan.textContent = parseFloat(cSlider.value).toFixed(2);
+    c2Slider.value = defaultC2;
+    c2ValSpan.textContent = parseFloat(c2Slider.value).toFixed(2);
 
-    // Function definitions: f(x) = sin(x) and f'(x) = cos(x)
+    // Domain for plotting: x from 0 to 6, y from -1.5 to 1.5.
+    const xMin = 0, xMax = 6;
+    const yMin = -1.5, yMax = 1.5;
+
+    // Define function f(x)=sin(x) and its derivative f'(x)=cos(x)
     function f(x) {
       return Math.sin(x);
     }
@@ -86,15 +99,12 @@
       return Math.cos(x);
     }
 
-    // Fixed current iterate and derivative value
+    // Fixed current iterate x = 3 and descent direction p = -cos(3)
     const currentX = 3;
     const gradAtX = fp(currentX);
+    const p = -gradAtX; // p = -cos(3)
 
-    // Domain for plotting: x from 0 to 6, y from -1.5 to 1.5
-    const xMin = 0, xMax = 6;
-    const yMin = -1.5, yMax = 1.5;
-
-    // Coordinate conversion functions
+    // Coordinate conversion functions.
     function toCanvasX(x) {
       return ((x - xMin) / (xMax - xMin)) * logicalWidth;
     }
@@ -103,20 +113,31 @@
     }
 
     // Draw the scene: function, current iterate, candidate point, and arrow.
-    function drawScene(alpha, c) {
-      // Compute candidate: x_candidate = xₖ - α f'(xₖ)
-      const candidateX = currentX - alpha * gradAtX;
+    function drawScene(alpha, c2) {
+      // Compute candidate: x_candidate = x + α p = 3 - α*cos(3)
+      const candidateX = currentX + alpha * p;
+      const candidateGrad = fp(candidateX);
       
-      // Armijo condition: f(candidate) ≤ f(xₖ) - cα[f'(xₖ)]²
-      const armijoCondition = f(candidateX) <= f(currentX) - c * alpha * gradAtX * gradAtX;
+      // For the curvature condition (Strong Wolfe):
+      // |∇f(x+αp)ᵀp| = |cos(candidateX)*(-cos(3))| = |cos(candidateX)|·|cos(3)|
+      // and |∇f(3)ᵀp| = |cos(3)*(-cos(3))| = cos(3)^2.
+      const leftSide = Math.abs(candidateGrad) * Math.abs(gradAtX);
+      const rightSide = c2 * Math.abs(gradAtX) * Math.abs(gradAtX);
+      const curvatureSatisfied = leftSide <= rightSide;
       
-      // Update info text
-      infoDiv.textContent = `xₖ = ${currentX.toFixed(2)}, f(xₖ) = ${f(currentX).toFixed(2)}; Candidate x = ${candidateX.toFixed(2)} ${armijoCondition ? "(Acceptable)" : "(Armijo violated!)"}`;
-
-      // Clear canvas
+      // Update info text with equations:
+      infoDiv.textContent =
+        "Curvature Condition (Strong Wolfe):\n" +
+        "----------------------------------------\n" +
+        "|∇f(x+αp)ᵀ p| = |cos(3 - α·cos(3))·(-cos(3))| = " + leftSide.toFixed(3) + "\n" +
+        "≤ c₂|∇f(3)ᵀ p| = c₂·|cos(3)·(-cos(3))| = " + rightSide.toFixed(3) + "\n\n" +
+        "Candidate: x = 3 - α·cos(3) = " + candidateX.toFixed(3) +
+        "\nCondition " + (curvatureSatisfied ? "Satisfied" : "Violated");
+      
+      // Clear canvas.
       ctx.clearRect(0, 0, logicalWidth, logicalHeight);
 
-      // Draw coordinate axes
+      // Draw coordinate axes.
       ctx.strokeStyle = "#aaa";
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -128,7 +149,7 @@
       ctx.lineTo(xAxisZero, logicalHeight);
       ctx.stroke();
 
-      // Draw function f(x) = sin(x)
+      // Draw function f(x)=sin(x) in blue.
       ctx.strokeStyle = "blue";
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -147,7 +168,7 @@
       }
       ctx.stroke();
 
-      // Draw current iterate as a red circle
+      // Draw current iterate as a red circle.
       const curCanvasX = toCanvasX(currentX);
       const curCanvasY = toCanvasY(f(currentX));
       ctx.fillStyle = "red";
@@ -155,25 +176,28 @@
       ctx.arc(curCanvasX, curCanvasY, 6, 0, 2 * Math.PI);
       ctx.fill();
 
-      // Draw candidate point and arrow
+      // Draw candidate point and arrow.
       const candCanvasX = toCanvasX(candidateX);
       const candCanvasY = toCanvasY(f(candidateX));
-      ctx.strokeStyle = armijoCondition ? "green" : "red";
+      const color = curvatureSatisfied ? "green" : "red";
+
+      ctx.strokeStyle = color;
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(curCanvasX, curCanvasY);
       ctx.lineTo(candCanvasX, candCanvasY);
       ctx.stroke();
-      ctx.fillStyle = armijoCondition ? "green" : "red";
+
+      ctx.fillStyle = color;
       ctx.beginPath();
       ctx.arc(candCanvasX, candCanvasY, 6, 0, 2 * Math.PI);
       ctx.fill();
 
-      // Draw arrowhead at candidate point
-      drawArrowhead(curCanvasX, curCanvasY, candCanvasX, candCanvasY, armijoCondition ? "green" : "red");
+      // Draw an arrowhead at the candidate point.
+      drawArrowhead(curCanvasX, curCanvasY, candCanvasX, candCanvasY, color);
     }
 
-    // Utility: Draw an arrowhead from (x1, y1) to (x2, y2)
+    // Utility function to draw an arrowhead.
     function drawArrowhead(x1, y1, x2, y2, color) {
       const headLength = 10;
       const angle = Math.atan2(y2 - y1, x2 - x1);
@@ -188,49 +212,41 @@
       ctx.fill();
     }
 
-    // Update drawing when sliders change
+    // Update drawing when slider values change.
     function updateScene() {
       const alpha = parseFloat(alphaSlider.value);
-      const c = parseFloat(cSlider.value);
+      const c2 = parseFloat(c2Slider.value);
       alphaValSpan.textContent = alpha.toFixed(2);
-      cValSpan.textContent = c.toFixed(2);
-      drawScene(alpha, c);
+      c2ValSpan.textContent = c2.toFixed(2);
+      drawScene(alpha, c2);
     }
     alphaSlider.addEventListener("input", updateScene);
-    cSlider.addEventListener("input", updateScene);
+    c2Slider.addEventListener("input", updateScene);
 
-    // Resize canvas based on container width, maintaining the aspect ratio
+    // Resize the canvas to match its container.
     function resizeCanvas() {
-      const container = document.querySelector(".canvas-container");
-      const style = window.getComputedStyle(container);
-      const containerWidth = container.clientWidth;
-      // Maintain a 3:2 aspect ratio
-      const containerHeight = containerWidth * (logicalHeight / logicalWidth);
-
-      // Set logical dimensions
-      logicalWidth = 600;
-      logicalHeight = 400;
-
-      // Set the canvas CSS size
-      canvas.style.width = containerWidth + "px";
-      canvas.style.height = containerHeight + "px";
-
-      // Adjust the internal resolution based on devicePixelRatio
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = containerWidth * dpr;
-      canvas.height = containerHeight * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      // Redraw scene with current slider values
+      // Determine the available width (max 600px as set by CSS).
+      const container = document.getElementById("canvasContainer");
+      logicalWidth = container.clientWidth;
+      logicalHeight = logicalWidth * (400 / 600); // maintain original 3:2 ratio
+      
+      // Adjust canvas resolution for high DPI displays.
+      canvas.width = logicalWidth * dpr;
+      canvas.height = logicalHeight * dpr;
+      canvas.style.width = logicalWidth + "px";
+      canvas.style.height = logicalHeight + "px";
+      
+      // Reset the transform before scaling.
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+      
+      // Redraw the scene with current slider values.
       updateScene();
     }
     
-    // Call resize on load and when window is resized
-    window.addEventListener("load", resizeCanvas);
+    // Initial setup.
+    resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
-
-    // Initial drawing (in case resize hasn't been triggered)
-    updateScene();
   </script>
 </body>
 </html>
