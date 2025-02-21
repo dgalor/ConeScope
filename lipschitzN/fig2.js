@@ -127,7 +127,11 @@ canvas.addEventListener("mousedown", (e) => {
   const mouseX = e.clientX - rect.left;
   const mouseY = e.clientY - rect.top;
   const dist = Math.hypot(mouseX - toCanvasX(apex.x), mouseY - toCanvasY(apex.y));
-  if (dist < 10) {  // within 10 pixels
+  // if (dist < 10) {  // within 10 pixels
+  //   dragging = true;
+  // }
+  // instead of 10 pixels do relative to the canvas size
+  if (dist < logicalWidth * 0.1) {  // within 10% of the canvas width
     dragging = true;
   }
 });
@@ -146,7 +150,12 @@ canvas.addEventListener("touchstart", (e) => {
   const touchX = e.touches[0].clientX - rect.left;
   const touchY = e.touches[0].clientY - rect.top;
   const dist = Math.hypot(touchX - toCanvasX(apex.x), touchY - toCanvasY(apex.y));
-  if (dist < 10) {
+  // if (dist < 10) {
+  //   dragging = true;
+  //   e.preventDefault();
+  // }
+  // instead of 10 pixels do relative to the canvas size
+  if (dist < logicalWidth * 0.1) {  // within 10% of the canvas width
     dragging = true;
     e.preventDefault();
   }
