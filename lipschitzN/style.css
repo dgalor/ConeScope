@@ -20,7 +20,26 @@ canvas {
     display: block;
     overflow: hidden;
 }
-#sliderContainer {
+
+.sliderContainer {
     margin-bottom: 1.0%;
 }
-  
+
+#controls {
+    margin-bottom: 15px;
+}
+
+#controls label {
+    font-size: 16px;
+    margin-right: 10px;
+}
+
+#info {
+    font-size: 16px;
+    margin-top: 5px;
+}
+
+.canvas-container {
+    margin: auto;
+    max-width: 600px;
+}
