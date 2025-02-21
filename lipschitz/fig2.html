@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lipschitz Cone Demo</title>
   <style>
     body {
@@ -13,11 +14,15 @@
     #container {
       display: inline-block;
       position: relative;
+      width: 100%;
+      max-width: 600px; /* maximum width for larger screens */
     }
     canvas {
       background: #fafafa;
       border: 1px solid #ccc;
       display: block;
+      width: 100%;
+      height: auto;
     }
     #sliderContainer {
       margin-bottom: 10px;
@@ -35,22 +40,19 @@
   </div>
 
   <script>
-    // Setup canvas with high DPI support
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
-    const logicalWidth = 600, logicalHeight = 400;
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = logicalWidth * dpr;
-    canvas.height = logicalHeight * dpr;
-    canvas.style.width = logicalWidth + "px";
-    canvas.style.height = logicalHeight + "px";
-    ctx.scale(dpr, dpr);
 
-    // Domain and range for plotting
+    // These variables will be updated on resize.
+    let logicalWidth = 600, logicalHeight = 400;
+    const aspectRatio = logicalHeight / logicalWidth;
+    const dpr = window.devicePixelRatio || 1;
+
+    // Domain and range for plotting remain unchanged.
     const xMin = -Math.PI, xMax = Math.PI;
     const yMin = -1.5, yMax = 1.5;
 
-    // Coordinate conversion functions
+    // Coordinate conversion functions.
     function toCanvasX(x) {
       return ((x - xMin) / (xMax - xMin)) * logicalWidth;
     }
@@ -73,6 +75,20 @@
     let apex = { x: 0, y: f(0) };
     let dragging = false;
 
+    // Resize the canvas based on container size.
+    function resizeCanvas() {
+      const container = document.getElementById("container");
+      logicalWidth = container.clientWidth;
+      logicalHeight = logicalWidth * aspectRatio;
+      canvas.width = logicalWidth * dpr;
+      canvas.height = logicalHeight * dpr;
+      canvas.style.width = logicalWidth + "px";
+      canvas.style.height = logicalHeight + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // Reset transform and scale for dpr
+      draw();
+    }
+    window.addEventListener("resize", resizeCanvas);
+    
     // Draw the entire scene
     function draw() {
       // Clear canvas
@@ -135,14 +151,14 @@
       ctx.beginPath();
       ctx.arc(cx, cy, 6, 0, 2 * Math.PI);
       ctx.fill();
-
-      // (Optional) Display the cone equations or current L value on canvas if desired.
     }
 
-    // Update apex based on mouse event (forcing it to lie on the curve)
+    // Update apex based on mouse/touch event (forcing it to lie on the curve)
     function updateApex(e) {
       const rect = canvas.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
+      // Support both mouse and touch events.
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const mouseX = clientX - rect.left;
       let x = toMathX(mouseX);
       apex = { x: x, y: f(x) };
     }
@@ -166,6 +182,26 @@
     canvas.addEventListener("mouseup", () => { dragging = false; });
     canvas.addEventListener("mouseleave", () => { dragging = false; });
 
+    // Touch event listeners for mobile devices
+    canvas.addEventListener("touchstart", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const touchX = e.touches[0].clientX - rect.left;
+      const touchY = e.touches[0].clientY - rect.top;
+      const dist = Math.hypot(touchX - toCanvasX(apex.x), touchY - toCanvasY(apex.y));
+      if (dist < 10) {
+        dragging = true;
+        e.preventDefault();
+      }
+    });
+    canvas.addEventListener("touchmove", (e) => {
+      if (dragging) {
+        updateApex(e);
+        draw();
+        e.preventDefault();
+      }
+    });
+    canvas.addEventListener("touchend", () => { dragging = false; });
+
     // Slider to adjust L
     const slopeSlider = document.getElementById("slopeSlider");
     const slopeVal = document.getElementById("slopeVal");
@@ -175,8 +211,8 @@
       draw();
     });
 
-    // Initial draw
-    draw();
+    // Initial setup
+    resizeCanvas();
   </script>
 </body>
 </html>
