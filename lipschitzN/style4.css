@@ -13,29 +13,29 @@ body {
     margin-right: 2%;
 }
   #info {
-    font-size: 16px;
-    margin: 10px auto;
+    font-size: 100%;
+    margin: 2% auto;
     max-width: 600px;
     background: #eaeaea;
-    padding: 10px;
-    border-radius: 5px;
+    padding: 2%;
+    border-radius: 1vw;
     white-space: pre-line;
     text-align: left;
   }
   /* The canvas container will adjust its size relative to the screen */
   #canvasContainer {
     max-width: 600px;
-    margin: 20px auto;
+    margin: 5% auto;
     position: relative;
   }
   canvas {
     width: 100%;
     height: auto;
     background: #fff;
-    border: 1px solid #ccc;
+    border: 0.1vw solid #ccc;
     display: block;
   }
   .slider-container {
-    margin: 10px 0;
+    margin: 1% 0;
   }
   

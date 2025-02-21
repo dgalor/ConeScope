@@ -16,7 +16,7 @@ body {
 
 canvas {
     background: #fafafa;
-    border: 1% solid #ccc;
+    border: 1vw solid #ccc;
     display: block;
     overflow: hidden;
 }
