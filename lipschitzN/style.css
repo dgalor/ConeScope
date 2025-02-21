@@ -1,0 +1,23 @@
+body {
+    margin: 20px;
+    font-family: Arial, sans-serif;
+    background: #fff;
+    text-align: center;
+    overflow: hidden;
+}
+
+#container {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+}
+
+canvas {
+    background: #fafafa;
+    border: 1px solid #ccc;
+    display: block;
+    overflow: hidden;
+}
+  
