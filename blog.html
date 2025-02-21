@@ -11,7 +11,7 @@
     }
     iframe {
         max-width: 100%;
-        
+        overflow: hidden;
     }
     /* Base page styling */
     body {
@@ -130,6 +130,19 @@
             // Convert Markdown to HTML using marked.js
             const htmlContent = marked.parse(markdownText);
             document.getElementById('content').innerHTML = htmlContent;
+
+            const iframes = document.querySelectorAll("iframe");
+            iframes.forEach(iframe => {
+            iframe.addEventListener("load", function() {
+                try {
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                // Set the iframe's height to the scroll height of its body
+                iframe.style.height = iframeDoc.body.scrollHeight + "px";
+                } catch (e) {
+                console.warn("Unable to access iframe content for resizing:", e);
+                }
+            });
+            });
         })
         .catch(error => {
             console.error('Error fetching Markdown:', error);
