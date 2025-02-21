@@ -1,5 +1,5 @@
 body {
-    margin: 20px;
+    margin: 2%;
     font-family: Arial, sans-serif;
     background: #fff;
     text-align: center;
@@ -7,7 +7,7 @@ body {
 }
 
 #container {
-    width: 100%;
+    width: 90%;
     max-width: 600px;
     margin: 0 auto;
     position: relative;
