@@ -97,7 +97,8 @@ function draw() {
   const diffX = Math.abs(pointA.x - pointB.x);
   const ratio = diffX < 1e-6 ? L.toFixed(3) : (diffY / diffX).toFixed(3);
   ctx.fillStyle = "black";
-  ctx.font = "16px Arial";
+  ctx.font = "100% Tahoma, Geneva, Verdana, sans-serif";
+//   ctx.font = "16px Arial";
   const text = `(|sin(x₁)-sin(x₂)|)/(|x₁-x₂|) = ${ratio} ≤ ${L}`;
   ctx.fillText(text, 10, 20);
 }
@@ -142,11 +143,17 @@ canvas.addEventListener("pointerdown", function(e) {
   const mouseY = (e.clientY - rect.top) / scaleFactor;
   const distA = Math.hypot(mouseX - toCanvasX(pointA.x), mouseY - toCanvasY(pointA.y));
   const distB = Math.hypot(mouseX - toCanvasX(pointB.x), mouseY - toCanvasY(pointB.y));
-  if (distA < 10) {
-    dragging = 'A';
-  } else if (distB < 10) {
-    dragging = 'B';
-  }
+//   if (distA < 10) {
+//     dragging = 'A';
+//   } else if (distB < 10) {
+//     dragging = 'B';
+//   }
+//do relative distance instead of whats above
+    if (distA < distB) {
+        dragging = 'A';
+    } else {
+        dragging = 'B';
+    }
 });
 
 canvas.addEventListener("pointermove", function(e) {
