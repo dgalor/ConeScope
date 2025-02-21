@@ -30,7 +30,7 @@ body {
   }
   canvas {
     width: 100%;
-    height: auto;
+    /* aspect-ratio: 3 / 2; */
     background: #fff;
     border: 0.1vw solid #ccc;
     display: block;
