@@ -26,12 +26,11 @@ canvas {
 }
 
 #controls {
-    margin-bottom: 1.5%;
+    margin-bottom: 5%;
 }
-
 #controls label {
-    font-size: 1.6%;
-    margin-right: 1.0%;
+    font-size: 100%;
+    margin-right: 2%;
 }
 
 #info {

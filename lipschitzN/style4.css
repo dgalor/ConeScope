@@ -1,0 +1,41 @@
+body {
+    margin: 2%;
+    font-family: Arial, sans-serif;
+    background: #fff;
+    text-align: center;
+    overflow: hidden;
+}
+#controls {
+    margin-bottom: 5%;
+}
+#controls label {
+    font-size: 100%;
+    margin-right: 2%;
+}
+  #info {
+    font-size: 16px;
+    margin: 10px auto;
+    max-width: 600px;
+    background: #eaeaea;
+    padding: 10px;
+    border-radius: 5px;
+    white-space: pre-line;
+    text-align: left;
+  }
+  /* The canvas container will adjust its size relative to the screen */
+  #canvasContainer {
+    max-width: 600px;
+    margin: 20px auto;
+    position: relative;
+  }
+  canvas {
+    width: 100%;
+    height: auto;
+    background: #fff;
+    border: 1px solid #ccc;
+    display: block;
+  }
+  .slider-container {
+    margin: 10px 0;
+  }
+  
